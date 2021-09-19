@@ -1,0 +1,348 @@
+<html>
+<head>
+<script src="https://code.jquery.com/jquery-3.4.0.min.js"
+        integrity="sha256-BJeo0qm959uMBGb65z40ejJYGSgR7REI4+CW1fNKwOg=" crossorigin="anonymous">
+</script>
+<style media="screen" type="text/css">
+        td {
+        width: 40px;
+        height: 40px;
+        }
+
+        .circle {
+        display: block;
+        width: 30px;
+        height: 30px;
+        margin: 0 auto;
+        border-radius: 50%;
+        }
+
+        .num-input {
+        width: 30px;
+        border-radius: 20%;
+        }
+</style>
+<title>Marble Solitaire</title>
+</head>
+<body style="font-family: Helvetica, sans-serif">
+
+<!--
+<select id="game-type">
+<option>English</option>
+<option>European</option>
+<option>Triangle</option>
+</select>
+        -->
+
+        Arm thickness: <input id="arm" type="text" class="num-input">
+<!-- Starting empty row: <input id="sRow" type="text" class="num-input">, column: <input id="sCol" type="text" class="num-input"> -->
+<button id="new-game" style="border-radius:5px">New Game</button>
+<table id="board" border="0"></table>
+<div style="display:none" id="score-disp">Score: <span id="score"></span></div>
+<div id="msg"></div>
+<script>
+  var slotTpl = '<div class="circle" style="%%%"/>'; // html snippet for PEG/EMPTY
+          // an "enum" representing slot values. PEG and EMPTY have styles.
+          var Slot = {
+          PEG: 1,
+          EMPTY: 2,
+          INVALID: 3,
+          prop: {
+          1: {style: "background-color:#4b5bb3;box-shadow: inset -5px -5px 5px rgba(0,0,0,.5);"},
+          2: {style: "background-color:white;box-shadow: inset 4px 4px 5px rgba(0,0,0,.5);"}
+          }
+          };
+
+class MarbleSolitaireView {
+  // set up the html table and score display
+  constructor(dim) {
+    if (dim <= 0) {
+      throw "Board side dimension must be positive";
+    }
+    this.boardSide = dim;
+    var tmpHtml = '';
+    for (var r = 0; r < dim; r++) {
+      tmpHtml += '<tr id="' + r + '">';
+      for (var c = 0; c < dim; c++) {
+        tmpHtml += '<td id="' + r + '-' + c + '"></td>';
+      }
+      tmpHtml += '</tr>';
+    }
+    $('#board').html(tmpHtml);
+    $('#score-disp').show();
+  }
+
+  // take a 2d array board, display it in the table; display given score
+  renderBoard(board, score) {
+    if (board.length != this.boardSide) {
+      throw "Invalid board dimension: " + board.length;
+    }
+    for (var r = 0; r < board.length; r++) {
+      if (board[r].length != this.boardSide) {
+        throw "Invalid board dimension: " + board[r].length;
+      }
+      for (var c = 0; c < board[r].length; c++) {
+        if (board[r][c] === Slot.PEG || board[r][c] === Slot.EMPTY) {
+          $('#' + r + '-' + c).html(slotTpl.replace(/%%%/, Slot.prop[board[r][c]].style));
+        }
+      }
+    }
+    $('#score').html(score);
+  }
+
+  // display a message below the board
+  setMessage(msg) {
+    $('#msg').html(msg);
+  }
+
+  // "highlight" a cell: change its background color to the given color.
+  // cells are 0-indexed from upper left to lower right
+  highlightCell(r, c, color) {
+    if (r < 0 || r >= this.boardSide || c < 0 || c >= this.boardSide) {
+      throw "Invalid cell position: " + r + "," + c;
+    }
+    $('#' + r + '-' + c).css('background-color', color);
+  }
+
+  // add a function to be executed when a cell is clicked. Function func must take
+  // two arguments, row and col (0-based indices, upper left to lower right)
+  addCellClickListener(func) {
+    $('td').click(function (evt) {
+      var cell = $(evt.target).attr('id') || $(evt.target).parent('td').attr('id');
+      var [row, col] = cell.split('-');
+      func(+row, +col);
+    });
+  }
+
+}
+
+  /*** Don't modify code above this line. Fill in your code BELOW this line. *****/
+
+  var fromRow;
+  var fromCol;
+class MarbleSolitaireController {
+  // take in model m and view v
+  constructor(m, v) {
+    v.renderBoard(m.board, "");
+    // board starts out completely filled; first click selects empty slot, and game begins.
+    // to start out, may be easier to hardcode a starting empty slot, get the game play right, then deal with this.
+    v.setMessage("Click to select starting empty slot");
+    v.addCellClickListener(function (row, col) {
+      console.log(row, col);
+
+
+
+
+
+      if(m.getScore() == m.armLength * (5 * m.armLength - 4)) {
+        if(m.board[row][col] != Slot.INVALID){
+          m.board[row][col] = Slot.EMPTY;
+        }
+
+
+        v.renderBoard(m.board, m.getScore());
+        v.setMessage("");
+        var toRow = row;
+        var toCol = col;
+      }
+
+      else if(m.isGameOver()) {
+        v.setMessage("GameOver");
+      }
+
+      else if(fromRow == null && fromCol == null && m.board[row][col] == Slot.PEG) {
+        v.highlightCell(row, col, "yellow");
+        fromRow = row;
+        fromCol = col;
+      }
+      else if(fromRow != null && fromCol != null) {
+
+        try {
+          m.move(fromRow, fromCol, row, col);
+          v.renderBoard(m.board, m.getScore());
+          v.highlightCell(fromRow, fromCol, "white");
+          fromRow = null;
+          fromCol = null;
+          if(m.isGameOver()) {
+            v.setMessage("GameOver");
+          }
+          else {
+            v.setMessage("");
+          }
+        } catch (err) {
+          v.highlightCell(fromRow, fromCol, "white");
+          v.setMessage("not a valid move");
+          fromRow = null;
+          fromCol = null;
+
+        }
+      }
+
+
+
+
+    }.bind(this));
+    // ^^^ ensure that in the body of the function "this"
+    //refers to the controller object, not the inner function context
+
+
+  }
+}
+
+// English style /**** YOUR CODE HERE *****/
+class MarbleSolitaireModel {
+  constructor(armLength) {
+    if (armLength >= 1 && armLength % 2 == 1) {
+
+      this.armLength = armLength;
+      this.board = this.getBoard();
+    } else {
+      throw "Input is not a positive odd number";
+    }
+  }
+
+  getBoardSide() {
+    // return board width (e.g. 7 for arm thickness 3)
+    return this.armLength * 3 - 2;
+  }
+
+  getBoard() {
+    // return a 2d array of Slot representing current game this.board
+    var init = [];
+
+    for (var i = 0; i < this.getBoardSide(); i++) {
+      var base = [];
+      for (var g = 0; g < this.getBoardSide(); g++) {
+        base.push(Slot.PEG);
+      }
+      init.push(base);
+      if (i < this.armLength - 1 || i > this.armLength * 2 - 2) {
+        for (var q = 0; q < this.getBoardSide(); q++) {
+          if (q < this.armLength - 1 || q > this.armLength * 2 - 2) {
+            init[i][q] = Slot.INVALID;
+          }
+        }
+      }
+
+    }
+    return init;
+  }
+
+  move(fromRow,fromCol, toRow, toCol) {
+    var length = 3 * arm - 2;
+    if (fromRow < 0 || fromCol < 0 || fromRow >= length || fromCol >= length || toRow < 0
+            || toCol < 0 || toRow >= length || toCol >= length) {
+      throw "invalid(outbound) input given";
+    }
+
+    if (this.board[fromRow][fromCol] == Slot.INVALID || this.board[toRow][toCol] == Slot.INVALID) {
+      throw "from or to position is invalid";
+    }
+    else if (this.board[fromRow][fromCol] == Slot.EMPTY) {
+      throw "Need a marble at the “from” position";
+    }
+    else if (!(this.board[toRow][toCol] == Slot.EMPTY)) {
+      throw "Need a empty space at the “to” position";
+    }
+    else if (Math.abs(fromRow - toRow) != 2 && Math.abs(fromCol - toCol) != 2
+            || (Math.abs(fromRow - toRow) == 2 && Math.abs(fromCol - toCol) == 2)) {
+      throw "the “to” and “from” positions need exactly two positions away";
+    }
+    else if (Math.abs(fromRow - toRow) == 2) {
+      if (this.board[(fromRow + toRow) / 2][fromCol] == Slot.EMPTY) {
+        throw "a marble needed between from and to";
+      }
+      else {
+        this.board[fromRow][fromCol] = Slot.EMPTY;
+        this.board[(fromRow + toRow) / 2][fromCol] = Slot.EMPTY;
+        this.board[toRow][fromCol] = Slot.PEG
+      }
+    }
+    else if (Math.abs(fromCol - toCol) == 2) {
+      if (this.board[fromRow][(fromCol + toCol) / 2] == Slot.EMPTY) {
+        throw "a marble needed between from and to";
+      }
+      else {
+        this.board[fromRow][fromCol] = Slot.EMPTY;
+        this.board[fromRow][(fromCol + toCol) / 2] = Slot.EMPTY;
+        this.board[toRow][toCol] = Slot.PEG;
+      }
+    }
+
+  }
+
+
+  isGameOver() {
+    var isGameOver = true;
+
+    for (var i = 0; i < 3 * this.armLength - 2; i++) {
+      for (var j = 0; j < 3 * this.armLength - 2; j++) {
+        if (this.board[i][j] == Slot.PEG) {
+          // left
+          if (i > 1) {
+            if (this.board[i - 1][j] == Slot.PEG
+                    && this.board[i - 2][j] == Slot.EMPTY) {
+              isGameOver = false;
+              break;
+            }
+          }
+          // right
+          if (i < this.board.length - 2) {
+            if (this.board[i + 1][j] == Slot.PEG
+                    && this.board[i + 2][j] == Slot.EMPTY) {
+              isGameOver = false;
+              break;
+            }
+          }
+          // top
+          if (j > 1) {
+            if (this.board[i][j - 1] == Slot.PEG
+                    && this.board[i][j - 2] == Slot.EMPTY) {
+              isGameOver = false;
+              break;
+            }
+          }
+          // bottom
+          if (j < this.board.length - 2) {
+            if (this.board[i][j + 1] == Slot.PEG
+                    && this.board[i][j + 2] == Slot.EMPTY) {
+              isGameOver = false;
+              break;
+            }
+          }
+        }
+      }
+
+    }
+    return isGameOver;
+  }
+
+  getScore() {
+    var counter = 0;
+    var length = this.armLength * 3 - 2;
+    for (let i = 0; i < length; i++) {
+      for (let q = 0; q < length; q++) {
+        if (this.board[i][q] == Slot.PEG) {
+          counter++;
+        }
+      }
+    }
+    return counter;
+  }
+
+}
+
+  var model, view, ctrl;
+
+  $('#new-game').click(function (evt) {
+        try {
+        model = new MarbleSolitaireModel($('#arm').val());
+        view = new MarbleSolitaireView(model.getBoardSide());
+        ctrl = new MarbleSolitaireController(model, view);
+        } catch (err) {
+        alert(err);
+        }
+        });
+</script>
+</body>
+</html>
